@@ -13,6 +13,7 @@ const Actions = {
   }
 }
 
+// jesus christ...
 function seconds(){
   return Date.now()/1000;
 }
@@ -29,9 +30,7 @@ function sqltable( name, table ){
 function Logger(){
   this.database = null;
   this.init = (path)=>{
-    // connect to db
     var db = new Sqlite3.Database(path);
-    // init db structure
     db.serialize(()=>{
       db.run(sqltable("Users", {
         userid : "INT",
@@ -56,8 +55,10 @@ function Logger(){
     this.database = db;
   }
   this.logUser = (userid, username)=>{
-    this.database.run("INSERT INTO Users(id, name) VALUES(?, ?)", [userid, username]);
-
+    console.log({
+      user : userid,
+      name : username
+    })
   }
   this.logMessageActivity = (userid, channelid)=>{
     console.log({
@@ -65,8 +66,6 @@ function Logger(){
       channel : channelid,
       timestamp : seconds()
     })
-
-
     this.database.run("INSERT INTO MessageActivity(userid, channelid, timestamp) VALUES(?, ?, ?)",
       [userid, channelid, seconds()]);
   }

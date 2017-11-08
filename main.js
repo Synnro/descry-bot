@@ -50,16 +50,13 @@ bot.on("voiceStateUpdate", (previous, current)=>{
     return logger.logVoiceActivity(user.id, current.voiceChannelID, Logging.Actions.UNMUTE);
 });
 
-bot.on("ready", ()=>{
-})
-
-bot.on("reconnecting", ()=>{
-})
-
 FileSystem.readFile("./conf.json", "utf8", (error, data)=>{
-  if(error) throw error;
+  if(error)
+    throw error;
   var conf = JSON.parse(data);
   bot.login(conf.token);
   logger.init("./data/" + conf.guild + ".db");
-  isGuild = (id)=>{return (id === conf.guild) }
+  isGuild = (id)=>{
+    return (id === conf.guild);
+  }
 });
