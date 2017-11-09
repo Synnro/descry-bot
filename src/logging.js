@@ -47,6 +47,11 @@ class Logger {
     this.database = null;
   }
 
+  /**
+  * Logger.init
+  * Creates or connects to database for guildid
+  * @param {int} guildid
+  */
   init( guildid ){
     var db = new Sqlite3.Database( "./data/" + guildid + ".db" );
     db.serialize(()=>{
@@ -73,6 +78,12 @@ class Logger {
     this.database = db;
   }
 
+  /**
+  * Logger.logMessageActivity
+  * Inserts new message activity record into table
+  * @param {int} userid
+  * @param {int} channelid
+  */
   logMessageActivity( userid, channelid ){
     console.log({
       userid,
@@ -87,6 +98,13 @@ class Logger {
     }
   }
 
+  /**
+  * Logger.logVoiceActivity
+  * Inserts new voice activity record into table
+  * @param {int} userid
+  * @param {int} channelid
+  * @param {int} action - flag for activity type, found in Actions table
+  */
   logVoiceActivity( userid, channelid, action ){
     console.log({
       userid,
@@ -102,10 +120,22 @@ class Logger {
     }
   }
 
+  /**
+  * Logger.logUser
+  * Inserts user into table if not existing
+  * @param {int} userid
+  * @param {string} username
+  */
   logUser( userid, username ){
 
   }
 
+  /**
+  * Logger.logChannel
+  * Inserts channel into table if not existing
+  * @param {int} channelid
+  * @param {string} channelname
+  */
   logChannel( channelid, channelname ){
 
   }

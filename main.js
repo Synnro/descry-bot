@@ -2,19 +2,32 @@ const FileSystem = require("fs");
 const Discord = require("discord.js");
 const Logging = require("./src/logging.js");
 
-const bot = new Discord.Client();
 const logger = new Logging.Logger();
+const bot = new Discord.Client();
 
 function isGuild(id){
   return false;
 }
 
+/**
+* Message Event
+* Event handler for receiving messages
+* Passes information to the logger
+* @param {Message} message
+*/
 bot.on("message", (message)=>{
   if(!isGuild(message.guild.id))
     return;
   return logger.logMessageActivity(message.author.id, message.channel.id);
 });
 
+/**
+* VoiceStateUpdate Event
+* Event handler for voice state updating
+* Passes information to the logger
+* @param {GuildMember} previous - previous state
+* @param {GuildMember} current  - current state
+*/
 bot.on("voiceStateUpdate", (previous, current)=>{
   if(!isGuild(previous.guild.id))
     return;
