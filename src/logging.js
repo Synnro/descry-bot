@@ -1,23 +1,23 @@
 const Sqlite3 = require("sqlite3").verbose();
 
-const Actions = {
-  CONNECT: 0,
-  DISCONNECT: 1,
-  CHANGEROOM: 2,
-  MUTE: 3,
-  UNMUTE: 4,
-  DEAFEN: 5,
-  UNDEAFEN: 6,
-  display : (i)=>{
-    return Object.keys(Actions)[i];
+// Returns an timestamp string, conforming to the sql timestamp format
+function sqltime(){
+  var pad = (n)=> {
+    if(n < 10)
+      return '0' + n;
+    return n;
   }
+  var date = new Date();
+  return date.getUTCFullYear() +
+  "-" + pad(date.getUTCMonth() + 1) + //january is 0 :thinking:
+  "-" + pad(date.getUTCDate()) +
+  " " + pad(date.getUTCHours()) +
+  ":" + pad(date.getUTCMinutes()) +
+  ":" + pad(date.getUTCSeconds()) +
+  "." + date.getUTCMilliseconds();
 }
 
-// jesus christ...
-function seconds(){
-  return Date.now()/1000;
-}
-
+// Returns a string for table creation
 function sqltable( name, table ){
   var sql = "CREATE TABLE IF NOT EXISTS " + name;
   sql += "(id INTEGER PRIMARY KEY"
@@ -27,10 +27,28 @@ function sqltable( name, table ){
   return sql + ")";
 }
 
-function Logger(){
-  this.database = null;
-  this.init = (path)=>{
-    var db = new Sqlite3.Database(path);
+// Actions for voice activity
+const Actions = {
+  DISCONNECT: 0,
+  CONNECT:    1,
+  MOVED:      2,
+  TIMEOUT:    3,
+  MUTE:       4,
+  UNMUTE:     5,
+  DEAFEN:     6,
+  UNDEAFEN:   7,
+  display : (i)=>{
+    return Object.keys(Actions)[i];
+  }
+}
+
+class Logger {
+  constructor(){
+    this.database = null;
+  }
+
+  init( guildid ){
+    var db = new Sqlite3.Database( "./data/" + guildid + ".db" );
     db.serialize(()=>{
       db.run(sqltable("Users", {
         userid : "INT",
@@ -42,42 +60,54 @@ function Logger(){
       }))
       db.run(sqltable("VoiceActivity", {
         userid : "INT",
+        action : "INT",
         channelid : "INT",
-        timestamp : "INT",
-        action : "INT"
+        timestamp : "TEXT"
       }))
       db.run(sqltable("MessageActivity", {
         userid : "INT",
         channelid : "INT",
-        timestamp : "INT"
+        timestamp : "TEXT"
       }))
     });
     this.database = db;
   }
-  this.logUser = (userid, username)=>{
+
+  logMessageActivity( userid, channelid ){
     console.log({
-      user : userid,
-      name : username
+      userid,
+      channelid,
+      timestamp: sqltime(),
     })
+    if(this.database){
+      this.database.run("INSERT INTO MessageActivity( userid, channelid, timestamp ) VALUES( ?, ?, ? )",
+        [userid, channelid, sqltime()]);
+    } else {
+      console.log("Failed to log message activity. Database not initialized!");
+    }
   }
-  this.logMessageActivity = (userid, channelid)=>{
+
+  logVoiceActivity( userid, channelid, action ){
     console.log({
-      user : userid,
-      channel : channelid,
-      timestamp : seconds()
+      userid,
+      channelid,
+      timestamp : sqltime(),
+      action : Actions.display(action),
     })
-    this.database.run("INSERT INTO MessageActivity(userid, channelid, timestamp) VALUES(?, ?, ?)",
-      [userid, channelid, seconds()]);
+    if(this.database){
+      this.database.run("INSERT INTO VoiceActivity( userid, action, channelid, timestamp ) VALUES( ?, ?, ?, ? )",
+        [userid, action, channelid, sqltime()])
+    } else {
+      console.log("Failed to log voice activity. Database not initialized!");
+    }
   }
-  this.logVoiceActivity = (userid, channelid, action)=>{
-    console.log({
-      user : userid,
-      channel : channelid,
-      timestamp : seconds(),
-      action : Actions.display(action)
-    })
-    this.database.run("INSERT INTO VoiceActivity(userid, channelid, timestamp, action ) VALUES(?, ?, ?, ?)",
-      [userid, channelid, seconds(), action])
+
+  logUser( userid, username ){
+
+  }
+
+  logChannel( channelid, channelname ){
+
   }
 }
 

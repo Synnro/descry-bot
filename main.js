@@ -31,7 +31,7 @@ bot.on("voiceStateUpdate", (previous, current)=>{
 
   // change room
   if(previous.voiceChannelID != current.voiceChannelID)
-    return logger.logVoiceActivity(user.id, current.voiceChannelID, Logging.Actions.CHANGEROOM);
+    return logger.logVoiceActivity(user.id, current.voiceChannelID, Logging.Actions.MOVED);
 
   // deafen
   if(!previous.selfDeaf && current.selfDeaf)
@@ -55,7 +55,7 @@ FileSystem.readFile("./conf.json", "utf8", (error, data)=>{
     throw error;
   var conf = JSON.parse(data);
   bot.login(conf.token);
-  logger.init("./data/" + conf.guild + ".db");
+  logger.init(conf.guild);
   isGuild = (id)=>{
     return (id === conf.guild);
   }
