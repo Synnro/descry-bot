@@ -5,6 +5,8 @@ const Logging = require("./src/logging.js");
 const logger = new Logging.Logger();
 const bot = new Discord.Client();
 
+var conf;
+
 function isGuild(id){
   return false;
 }
@@ -18,7 +20,13 @@ function isGuild(id){
 bot.on("message", (message)=>{
   if(!isGuild(message.guild.id))
     return;
-  return logger.logMessageActivity(message.author.id, message.channel.id);
+
+  var user = message.author;
+  // TODO: move this to user join event for performance
+  logger.logUser(user.id, user.username);
+  logger.logChannel(message.channel);
+
+  return logger.logMessageActivity(user.id, message.channel.id);
 });
 
 /**
@@ -33,14 +41,24 @@ bot.on("voiceStateUpdate", (previous, current)=>{
     return;
 
   var user = previous.user;
+  // TODO: move this to user join event for performance
+  logger.logUser(user.id, user.username);
 
   // connect
-  if(!previous.voiceChannelID)
+  if(!previous.voiceChannelID){
+    logger.logChannel(current.voiceChannel.id, current.voiceChannel.name);
     return logger.logVoiceActivity(user.id, current.voiceChannelID, Logging.Actions.CONNECT);
+  }
 
   // disconnect
-  if(!current.voiceChannelID)
+  if(!current.voiceChannelID){
+    logger.logChannel(previous.voiceChannel.id, previous.voiceChannel.name);
     return logger.logVoiceActivity(user.id, previous.voiceChannelID, Logging.Actions.DISCONNECT);
+  }
+
+  // if move between rooms, log each
+  logger.logChannel(previous.voiceChannel.id, previous.voiceChannel.name);
+  logger.logChannel(current.voiceChannel.id, current.voiceChannel.name);
 
   // change room
   if(previous.voiceChannelID != current.voiceChannelID)
@@ -63,10 +81,11 @@ bot.on("voiceStateUpdate", (previous, current)=>{
     return logger.logVoiceActivity(user.id, current.voiceChannelID, Logging.Actions.UNMUTE);
 });
 
+
 FileSystem.readFile("./conf.json", "utf8", (error, data)=>{
   if(error)
     throw error;
-  var conf = JSON.parse(data);
+  conf = JSON.parse(data);
   bot.login(conf.token);
   logger.init(conf.guild);
   isGuild = (id)=>{

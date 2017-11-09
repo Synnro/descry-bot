@@ -59,23 +59,24 @@ class Logger {
         userid : "INT",
         username : "TEXT"
       }))
-      db.run(sqltable("Channels", {
+      .run(sqltable("Channels", {
         channelid : "INT",
         channelname : "TEXT"
       }))
-      db.run(sqltable("VoiceActivity", {
+      .run(sqltable("VoiceActivity", {
         userid : "INT",
         action : "INT",
         channelid : "INT",
         timestamp : "TEXT"
       }))
-      db.run(sqltable("MessageActivity", {
+      .run(sqltable("MessageActivity", {
         userid : "INT",
         channelid : "INT",
         timestamp : "TEXT"
-      }))
+      }), ()=>{
+        this.database = db;
+      })
     });
-    this.database = db;
   }
 
   /**
@@ -127,7 +128,17 @@ class Logger {
   * @param {string} username
   */
   logUser( userid, username ){
-
+    if(this.database){
+      this.database.get("SELECT * FROM Users WHERE userid = ?", [userid], (error, result)=>{
+        if(error)
+          console.log(error);
+        if(!result){
+          console.log("Logging new user: " + username );
+          this.database.run("INSERT INTO Users( userid, username ) VALUES( ?, ? )",
+            [userid, username])
+        }
+      })
+    }
   }
 
   /**
@@ -137,7 +148,17 @@ class Logger {
   * @param {string} channelname
   */
   logChannel( channelid, channelname ){
-
+    if(this.database){
+      this.database.get("SELECT * FROM Channels WHERE channelid = ?", [channelid], (error, result)=>{
+        if(error)
+          throw error;
+        if(!result){
+          console.log("Logging new channel: " + channelname );
+          this.database.run("INSERT INTO Channels( channelid, channelname ) VALUES ( ?, ? )",
+            [channelid, channelname])
+        }
+      })
+    }
   }
 }
 
