@@ -7,10 +7,6 @@ const bot = new Discord.Client();
 
 var conf;
 
-function isGuild(id){
-  return false;
-}
-
 /**
 * Message Event
 * Event handler for receiving messages
@@ -18,13 +14,11 @@ function isGuild(id){
 * @param {Message} message
 */
 bot.on("message", (message)=>{
-  if(!isGuild(message.guild.id))
+  if(conf.guild != message.guild.id)
     return;
-
   var user = message.author;
-  // TODO: move this to user join event for performance
   logger.logUser(user.id, user.username);
-  logger.logChannel(message.channel);
+  logger.logChannel(message.channel.id, message.channel.name);
 
   return logger.logMessageActivity(user.id, message.channel.id);
 });
@@ -37,28 +31,22 @@ bot.on("message", (message)=>{
 * @param {GuildMember} current  - current state
 */
 bot.on("voiceStateUpdate", (previous, current)=>{
-  if(!isGuild(previous.guild.id))
+  if(conf.guild != previous.guild.id)
     return;
-
   var user = previous.user;
-  // TODO: move this to user join event for performance
   logger.logUser(user.id, user.username);
+  if(previous.voiceChannel)
+    logger.logChannel(previous.voiceChannel.id, previous.voiceChannel.name);
+  if(current.voiceChannel)
+    logger.logChannel(current.voiceChannel.id, current.voiceChannel.name);
 
   // connect
-  if(!previous.voiceChannelID){
-    logger.logChannel(current.voiceChannel.id, current.voiceChannel.name);
+  if(!previous.voiceChannelID)
     return logger.logVoiceActivity(user.id, current.voiceChannelID, Logging.Actions.CONNECT);
-  }
 
   // disconnect
-  if(!current.voiceChannelID){
-    logger.logChannel(previous.voiceChannel.id, previous.voiceChannel.name);
+  if(!current.voiceChannelID)
     return logger.logVoiceActivity(user.id, previous.voiceChannelID, Logging.Actions.DISCONNECT);
-  }
-
-  // if move between rooms, log each
-  logger.logChannel(previous.voiceChannel.id, previous.voiceChannel.name);
-  logger.logChannel(current.voiceChannel.id, current.voiceChannel.name);
 
   // change room
   if(previous.voiceChannelID != current.voiceChannelID)
@@ -88,7 +76,4 @@ FileSystem.readFile("./conf.json", "utf8", (error, data)=>{
   conf = JSON.parse(data);
   bot.login(conf.token);
   logger.init(conf.guild);
-  isGuild = (id)=>{
-    return (id === conf.guild);
-  }
 });
