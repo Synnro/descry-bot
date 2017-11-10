@@ -2,6 +2,7 @@ const FileSystem = require("fs");
 const Discord = require("discord.js");
 const Logging = require("./src/logging.js");
 
+
 const logger = new Logging.Logger();
 const bot = new Discord.Client();
 
@@ -16,6 +17,7 @@ var conf;
 bot.on("message", (message)=>{
   if(conf.guild != message.guild.id)
     return;
+
   var user = message.author;
   logger.logUser(user.id, user.username);
   logger.logChannel(message.channel.id, message.channel.name);
@@ -33,6 +35,7 @@ bot.on("message", (message)=>{
 bot.on("voiceStateUpdate", (previous, current)=>{
   if(conf.guild != previous.guild.id)
     return;
+
   var user = previous.user;
   logger.logUser(user.id, user.username);
   if(previous.voiceChannel)

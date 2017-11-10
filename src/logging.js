@@ -1,4 +1,9 @@
 const Sqlite3 = require("sqlite3").verbose();
+const States = require("./states.js");
+
+function warn( message ){
+  return ()=>{ console.log( message ) };
+}
 
 // Returns an timestamp string, conforming to the sql timestamp format
 function sqltime(){
@@ -18,11 +23,14 @@ function sqltime(){
 }
 
 // Returns a string for table creation
-function sqltable( name, table ){
+function sqltable( name, table, constraints ){
   var sql = "CREATE TABLE IF NOT EXISTS " + name;
   sql += "(id INTEGER PRIMARY KEY"
   for(var key in table ){
     sql += ", " + key + " " + table[key];
+  }
+  for(var key in constraints ){
+    sql += ", CONSTRAINT " + key + "_unique UNIQUE(" + key + ")"
   }
   return sql + ")";
 }
@@ -42,26 +50,37 @@ const Actions = {
   }
 }
 
-class Logger {
+class Logger extends States.StateBased {
   constructor(){
+    super();
     this.database = null;
+    this.mutate( LoggerDatabaseClosedState );
   }
+  init(){}
+  logMessageActivity(){}
+  logVoiceActivity(){}
+  logChannel(){}
+  logUser(){}
+}
 
-  /**
-  * Logger.init
-  * Creates or connects to database for guildid
-  * @param {int} guildid
-  */
-  init( guildid ){
+const LoggerDatabaseClosedState = {
+  onStateEnter : function(){
+    console.log( "Database closed or not yet open..." )
+  },
+  init : function( guildid ){
     var db = new Sqlite3.Database( "./data/" + guildid + ".db" );
     db.serialize(()=>{
       db.run(sqltable("Users", {
         userid : "INT",
         username : "TEXT"
+      },{
+        userid : "UNIQUE"
       }))
       .run(sqltable("Channels", {
         channelid : "INT",
         channelname : "TEXT"
+      }, {
+        channelid : "UNIQUE"
       }))
       .run(sqltable("VoiceActivity", {
         userid : "INT",
@@ -75,90 +94,44 @@ class Logger {
         timestamp : "TEXT"
       }), ()=>{
         this.database = db;
+        this.mutate( LoggerDatabaseOpenState );
       })
     });
-  }
+  },
+  logMessageActivity : warn( "Logger not connected to database..." ),
+  logVoiceActivity : warn( "Logger not connected to database..." ),
+  logChannel : warn( "Logger not connected to database..." ),
+  logUser : warn( "Logger not connected to database..." )
+}
 
-  /**
-  * Logger.logMessageActivity
-  * Inserts new message activity record into table
-  * @param {int} userid
-  * @param {int} channelid
-  */
-  logMessageActivity( userid, channelid ){
-    console.log({
-      userid,
-      channelid,
-      timestamp: sqltime(),
-    })
-    if(this.database){
-      this.database.run("INSERT INTO MessageActivity( userid, channelid, timestamp ) VALUES( ?, ?, ? )",
-        [userid, channelid, sqltime()]);
-    } else {
-      console.log("Failed to log message activity. Database not initialized!");
-    }
-  }
-
-  /**
-  * Logger.logVoiceActivity
-  * Inserts new voice activity record into table
-  * @param {int} userid
-  * @param {int} channelid
-  * @param {int} action - flag for activity type, found in Actions table
-  */
-  logVoiceActivity( userid, channelid, action ){
-    console.log({
-      userid,
-      channelid,
-      timestamp : sqltime(),
-      action : Actions.display(action),
-    })
-    if(this.database){
-      this.database.run("INSERT INTO VoiceActivity( userid, action, channelid, timestamp ) VALUES( ?, ?, ?, ? )",
-        [userid, action, channelid, sqltime()])
-    } else {
-      console.log("Failed to log voice activity. Database not initialized!");
-    }
-  }
-
-  /**
-  * Logger.logUser
-  * Inserts user into table if not existing
-  * @param {int} userid
-  * @param {string} username
-  */
-  logUser( userid, username ){
-    if(this.database){
-      this.database.get("SELECT * FROM Users WHERE userid = ?", [userid], (error, result)=>{
-        if(error)
-          console.log(error);
-        if(!result){
-          console.log("Logging new user: " + username );
-          this.database.run("INSERT INTO Users( userid, username ) VALUES( ?, ? )",
-            [userid, username])
-        }
+const LoggerDatabaseOpenState = {
+  onStateEnter : function(){
+    console.log( "Datababase Opened!" );
+  },
+  init : warn( "Logger already connected to database..." ),
+  logMessageActivity : function( userid, channelid ){
+    this.database.run("INSERT INTO MessageActivity( userid, channelid, timestamp ) VALUES( ?, ?, ? )",
+      [userid, channelid, sqltime()]);
+  },
+  logVoiceActivity : function( userid, channelid, action ){
+    this.database.run("INSERT INTO VoiceActivity( userid, action, channelid, timestamp ) VALUES( ?, ?, ?, ? )",
+      [userid, action, channelid, sqltime()]);
+  },
+  logChannel : function( channelid, channelname ){
+    this.database.run("INSERT INTO Channels( channelid, channelname ) VALUES ( ?, ? )",
+      [channelid, channelname],
+      (err)=>{
+        if(err.code != "SQLITE_CONSTRAINT")
+          throw err;
+      });
+  },
+  logUser : function( userid, username ){
+    this.database.run("INSERT INTO Users( userid, username ) VALUES( ?, ? )",
+      [userid, username],
+      (err)=>{
+        if(err.code != "SQLITE_CONSTRAINT")
+          throw err;
       })
-    }
-  }
-
-  /**
-  * Logger.logChannel
-  * Inserts channel into table if not existing
-  * @param {int} channelid
-  * @param {string} channelname
-  */
-  logChannel( channelid, channelname ){
-    if(this.database){
-      this.database.get("SELECT * FROM Channels WHERE channelid = ?", [channelid], (error, result)=>{
-        if(error)
-          throw error;
-        if(!result){
-          console.log("Logging new channel: " + channelname );
-          this.database.run("INSERT INTO Channels( channelid, channelname ) VALUES ( ?, ? )",
-            [channelid, channelname])
-        }
-      })
-    }
   }
 }
 
