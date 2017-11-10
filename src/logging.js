@@ -121,7 +121,7 @@ const LoggerDatabaseOpenState = {
     this.database.run("INSERT INTO Channels( channelid, channelname ) VALUES ( ?, ? )",
       [channelid, channelname],
       (err)=>{
-        if(err.code != "SQLITE_CONSTRAINT")
+        if(err && err.code != "SQLITE_CONSTRAINT")
           throw err;
       });
   },
@@ -129,7 +129,7 @@ const LoggerDatabaseOpenState = {
     this.database.run("INSERT INTO Users( userid, username ) VALUES( ?, ? )",
       [userid, username],
       (err)=>{
-        if(err.code != "SQLITE_CONSTRAINT")
+        if(err & err.code != "SQLITE_CONSTRAINT")
           throw err;
       })
   }
