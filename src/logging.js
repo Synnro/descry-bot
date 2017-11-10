@@ -120,18 +120,12 @@ const LoggerDatabaseOpenState = {
   logChannel : function( channelid, channelname ){
     this.database.run("INSERT INTO Channels( channelid, channelname ) VALUES ( ?, ? )",
       [channelid, channelname],
-      (err)=>{
-        if(err && err.code != "SQLITE_CONSTRAINT")
-          throw err;
-      });
+      (err)=>{});
   },
   logUser : function( userid, username ){
     this.database.run("INSERT INTO Users( userid, username ) VALUES( ?, ? )",
       [userid, username],
-      (err)=>{
-        if(err & err.code != "SQLITE_CONSTRAINT")
-          throw err;
-      })
+      (err)=>{});
   }
 }
 
